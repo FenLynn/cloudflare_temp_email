@@ -1,0 +1,19 @@
+name = "cloudflare-temp-email"  # 你的 Worker 项目名称，部署后在 CF 后台显示的名字
+main = "src/index.ts"           # 告诉 CF 你的主程序代码在哪里（不用动）
+compatibility_date = "2023-12-01" # 兼容性日期，防止 CF 引擎更新导致旧代码报错（不用动）
+
+[vars]
+# 这里放“公开透明”的环境变量
+PREFIX = "tmp"                  # 你的邮箱默认前缀。别人看到了也没事。
+DOMAIN = "660415.com"           # 你的主域名。公开的无所谓。
+
+[[d1_databases]]
+# 数据库绑定配置
+binding = "DB"                  # 代码里调用数据库的代号（不用动）
+database_name = "temp-email-db" # 你在 CF 后台给数据库起的名字
+database_id = "94197b62-355f-4931-8e5d-defc8ede593a" # D1 数据库的唯一 UUID。这串字母数字即使公开了，别人没有你的 API Token 也无法访问，所以放在这里是安全的。
+
+[[r2_buckets]]
+# 对象存储绑定配置
+binding = "R2"                  # 代码里调用 R2 的代号（不用动）
+bucket_name = "temp-email-r2"   # 你在 CF 后台给 R2 起的桶名称
