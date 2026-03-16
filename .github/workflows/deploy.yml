@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy Backend Worker
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Repo
         uses: actions/checkout@v4
 
       - name: Setup Node
@@ -18,12 +18,16 @@ jobs:
         with:
           node-version: 20
 
+      # 核心修正 1：指定进入 worker 目录安装依赖
       - name: Install Dependencies
+        working-directory: ./worker
         run: npm install
 
+      # 核心修正 2：指定进入 worker 目录读取 wrangler.toml 并部署
       - name: Build & Deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
+          workingDirectory: 'worker'
