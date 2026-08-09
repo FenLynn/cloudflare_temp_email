@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
@@ -7,6 +7,7 @@ import { useGlobalState } from '../store'
 import { api } from '../api'
 import { getRouterPathWithLang, hashPassword } from '../utils'
 import Turnstile from '../components/Turnstile.vue'
+import { initDashboardMailBridge } from '../utils/dashboard-mail-bridge'
 
 import SenderAccess from './admin/SenderAccess.vue'
 import Statistics from "./admin/Statistics.vue"
@@ -165,6 +166,7 @@ const { t, locale } = useI18n({
 
 const showAdminPasswordModal = computed(() => !showAdminPage.value || showAdminAuth.value)
 const tmpAdminAuth = ref('')
+let disposeDashboardMailBridge = () => {}
 // 判断是否通过 admin password 登录（而非用户管理员权限）
 const isAdminPasswordLogin = computed(() => !!adminAuth.value)
 
@@ -181,11 +183,14 @@ const currentLoginMethod = computed(() => {
 })
 
 onMounted(async () => {
+  disposeDashboardMailBridge = initDashboardMailBridge()
   // make sure openSettings is fetched for turnstile check
   if (!openSettings.value.fetched) await api.getOpenSettings(message);
   // make sure user_id is fetched
   if (!userSettings.value.user_id) await api.getUserSettings(message);
 })
+
+onUnmounted(() => disposeDashboardMailBridge())
 </script>
 
 <template>

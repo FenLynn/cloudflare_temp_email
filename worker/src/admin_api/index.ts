@@ -165,6 +165,7 @@ api.post('/admin/address/:id/reset_password', async (c) => {
 
 // mail api
 api.get('/admin/mails', admin_mail_api.getMails);
+api.get('/admin/notifications', admin_mail_api.getNotifications);
 api.get('/admin/mails_unknow', admin_mail_api.getUnknowMails);
 api.delete('/admin/mails/:id', admin_mail_api.deleteMail)
 
