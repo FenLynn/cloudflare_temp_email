@@ -83,6 +83,7 @@ export const extractVerificationCode = (
 
     const text = `${subject || ""}\n${content || ""}`.slice(0, 5000);
     const patterns = [
+        /(?:临时验证码|验证码|校验码|认证码|动态码|安全码|确认码|激活码|登录码|登录代码|一次性密码)[\s\S]{0,32}?(\d{4,8})(?!\d)/i,
         /(?:验证码|校验码|认证码|动态码|安全码|确认码|激活码|登录码|一次性密码)\s*(?:是|为|[:：-])?\s*([a-z0-9][a-z0-9\s-]{2,14})/i,
         /(?:verification|security|authentication|confirmation|login|one[- ]time)\s*(?:code|password|pin)?\s*(?:is|[:：-])?\s*([a-z0-9][a-z0-9\s-]{2,14})/i,
         /(?:otp|passcode)\s*(?:is|[:：-])?\s*([a-z0-9][a-z0-9\s-]{2,14})/i,
