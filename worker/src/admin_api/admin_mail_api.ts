@@ -150,6 +150,29 @@ export const getMailNotifications = async (
     };
 };
 
+export const getMailNotificationStatus = async (
+    env: Pick<Bindings, "DB">,
+    requestedSeenId: unknown = 0
+) => {
+    const parsedSeenId = Number.parseInt(String(requestedSeenId || ""), 10);
+    const seenId = Number.isFinite(parsedSeenId) && parsedSeenId > 0 ? parsedSeenId : 0;
+    const [latestRow, countRow, unreadRow] = await Promise.all([
+        env.DB.prepare(`SELECT id FROM raw_mails ORDER BY id DESC LIMIT 1`).first<{ id: number }>(),
+        env.DB.prepare(`SELECT COUNT(*) AS count FROM raw_mails`).first<{ count: number }>(),
+        seenId
+            ? env.DB.prepare(`SELECT COUNT(*) AS count FROM raw_mails WHERE id > ?`)
+                .bind(seenId).first<{ count: number }>()
+            : Promise.resolve({ count: 0 }),
+    ]);
+
+    return {
+        latestId: latestRow?.id || null,
+        total: Number(countRow?.count || 0),
+        unreadCount: Number(unreadRow?.count || 0),
+        generatedAt: new Date().toISOString(),
+    };
+};
+
 export default {
     getMails: async (c: Context<HonoCustomType>) => {
         const { address, limit, offset } = c.req.query();

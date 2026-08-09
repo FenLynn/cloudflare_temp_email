@@ -17,7 +17,7 @@ import { email } from './email';
 import { scheduled } from './scheduled';
 import { getPasswords, getBooleanValue, getStringArray, checkIsAdmin } from './utils';
 import { checkAccessControl } from './ip_blacklist';
-import { getMailNotifications } from './admin_api/admin_mail_api';
+import { getMailNotifications, getMailNotificationStatus } from './admin_api/admin_mail_api';
 
 const API_PATHS = [
 	"/api/",
@@ -285,6 +285,10 @@ app.all('/*', async c => c.text("Not Found", 404))
 export class DashboardMailEntrypoint extends WorkerEntrypoint<Bindings> {
 	async getNotifications(limit = 8) {
 		return getMailNotifications(this.env, limit);
+	}
+
+	async getNotificationStatus(seenId = 0) {
+		return getMailNotificationStatus(this.env, seenId);
 	}
 }
 

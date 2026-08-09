@@ -8,7 +8,7 @@
 
 1. Dashboard 请求 `sci-worker` 的 `GET /api/mail/notifications`。
 2. `sci-worker` 通过 `TEMP_EMAIL` Service Binding 调用具名 RPC EntryPoint。
-3. 邮箱 Worker 的 `DashboardMailEntrypoint.getNotifications()` 从 D1 读取最近邮件。
+3. 邮箱 Worker 的 `DashboardMailEntrypoint.getNotifications()` 从 D1 读取最近邮件；`getNotificationStatus()` 仅查询未读数量。
 4. RPC 返回发件人、收件地址、主题、摘要、时间、验证码和复杂邮件标记。
 5. Dashboard 显示摘要；附件或复杂邮件仍进入完整管理页处理。
 
@@ -17,6 +17,7 @@
 - Service Binding 是 Cloudflare 账户内授予 `sci-worker` 的能力，不保存或传递邮箱管理员密码。
 - 具名 RPC EntryPoint 没有供浏览器直接调用的公开 URL。
 - 响应不包含原始 MIME、完整 HTML 或附件内容。
+- Dashboard 仅在页面可见时定时查询轻量状态；打开面板后才解析邮件摘要。
 - Dashboard 不接触邮箱管理员密码；完整管理页认证仍只留在邮箱域名下。
 - 兼容用的 `/admin/notifications` 仍沿用原管理员认证，并禁止缓存。
 
