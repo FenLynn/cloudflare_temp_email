@@ -2,6 +2,7 @@ import { Context, Hono } from 'hono'
 import { cors } from 'hono/cors';
 import { jwt } from 'hono/jwt'
 import { Jwt } from 'hono/utils/jwt'
+import { WorkerEntrypoint } from 'cloudflare:workers'
 
 import { api as commonApi } from './commom_api';
 import { api as openAuthApi } from './open_api/auth';
@@ -16,6 +17,7 @@ import { email } from './email';
 import { scheduled } from './scheduled';
 import { getPasswords, getBooleanValue, getStringArray, checkIsAdmin } from './utils';
 import { checkAccessControl } from './ip_blacklist';
+import { getMailNotifications } from './admin_api/admin_mail_api';
 
 const API_PATHS = [
 	"/api/",
@@ -280,6 +282,11 @@ app.get('/', health_check)
 app.get('/health_check', health_check)
 app.all('/*', async c => c.text("Not Found", 404))
 
+export class DashboardMailEntrypoint extends WorkerEntrypoint<Bindings> {
+	async getNotifications(limit = 8) {
+		return getMailNotifications(this.env, limit);
+	}
+}
 
 export default {
 	fetch: app.fetch,

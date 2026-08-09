@@ -96,7 +96,7 @@ export const extractVerificationCode = (
     return "";
 };
 
-const parseNotificationLimit = (value: string | undefined): number => {
+const parseNotificationLimit = (value: unknown): number => {
     const parsed = Number.parseInt(String(value || ""), 10);
     if (!Number.isFinite(parsed)) return DEFAULT_NOTIFICATION_LIMIT;
     return Math.min(Math.max(parsed, 1), MAX_NOTIFICATION_LIMIT);
@@ -127,6 +127,28 @@ const buildNotification = async (row: MailNotificationRow) => {
     };
 };
 
+export const getMailNotifications = async (
+    env: Pick<Bindings, "DB">,
+    requestedLimit: unknown = DEFAULT_NOTIFICATION_LIMIT
+) => {
+    const limit = parseNotificationLimit(requestedLimit);
+    const [{ results }, countRow] = await Promise.all([
+        env.DB.prepare(
+            `SELECT id, source, address, raw, metadata, created_at
+             FROM raw_mails ORDER BY id DESC LIMIT ?`
+        ).bind(limit).all<MailNotificationRow>(),
+        env.DB.prepare(`SELECT COUNT(*) AS count FROM raw_mails`).first<{ count: number }>(),
+    ]);
+    const items = await Promise.all((results || []).map(buildNotification));
+
+    return {
+        items,
+        total: Number(countRow?.count || 0),
+        latestId: items[0]?.id || null,
+        generatedAt: new Date().toISOString(),
+    };
+};
+
 export default {
     getMails: async (c: Context<HonoCustomType>) => {
         const { address, limit, offset } = c.req.query();
@@ -151,24 +173,11 @@ export default {
         );
     },
     getNotifications: async (c: Context<HonoCustomType>) => {
-        const limit = parseNotificationLimit(c.req.query("limit"));
-        const [{ results }, countRow] = await Promise.all([
-            c.env.DB.prepare(
-                `SELECT id, source, address, raw, metadata, created_at
-                 FROM raw_mails ORDER BY id DESC LIMIT ?`
-            ).bind(limit).all<MailNotificationRow>(),
-            c.env.DB.prepare(`SELECT COUNT(*) AS count FROM raw_mails`).first<{ count: number }>(),
-        ]);
-        const items = await Promise.all((results || []).map(buildNotification));
+        const payload = await getMailNotifications(c.env, c.req.query("limit"));
 
         c.header("Cache-Control", "no-store");
         c.header("Pragma", "no-cache");
-        return c.json({
-            items,
-            total: Number(countRow?.count || 0),
-            latestId: items[0]?.id || null,
-            generatedAt: new Date().toISOString(),
-        });
+        return c.json(payload);
     },
     deleteMail: async (c: Context<HonoCustomType>) => {
         const { id } = c.req.param();
