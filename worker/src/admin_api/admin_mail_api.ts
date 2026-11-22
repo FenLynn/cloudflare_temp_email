@@ -10,6 +10,8 @@ type MailNotificationRow = {
     created_at: string | null;
 };
 
+type MailMessageRow = MailNotificationRow & { message_id?: string | null };
+
 type AiExtractResult = {
     type?: string;
     result?: string;
@@ -169,6 +171,43 @@ export const getMailNotificationStatus = async (
         latestId: latestRow?.id || null,
         total: Number(countRow?.count || 0),
         unreadCount: Number(unreadRow?.count || 0),
+        generatedAt: new Date().toISOString(),
+    };
+};
+
+/** Read-only, bounded mail details for trusted service bindings (for example, the
+ * 12306 calendar adapter). It deliberately returns parsed text and headers, not
+ * database metadata or arbitrary attachment bytes. */
+export const getMailMessages = async (
+    env: Pick<Bindings, "DB">,
+    address: string,
+    afterId: number = 0,
+    requestedLimit: number = 20,
+) => {
+    const normalizedAddress = normalizeWhitespace(address);
+    const cursor = Number.isSafeInteger(afterId) && afterId > 0 ? afterId : 0;
+    const limit = Math.min(Math.max(Number(requestedLimit) || 20, 1), 50);
+    if (!normalizedAddress) return { items: [], latestId: null, generatedAt: new Date().toISOString() };
+    const { results } = await env.DB.prepare(
+        `SELECT id, source, address, raw, metadata, message_id, created_at
+         FROM raw_mails WHERE address = ? AND id > ? ORDER BY id ASC LIMIT ?`
+    ).bind(normalizedAddress, cursor, limit).all<MailMessageRow>();
+    const items = await Promise.all((results || []).map(async row => {
+        const parsed = row.raw ? await commonParseMail({ rawEmail: row.raw }).catch(() => undefined) : undefined;
+        const text = String(parsed?.text || htmlToText(parsed?.html || ""));
+        return {
+            id: row.id,
+            messageId: row.message_id || null,
+            sender: normalizeSender(parsed?.sender || "", row.source || ""),
+            recipient: normalizeWhitespace(row.address || ""),
+            subject: normalizeWhitespace(parsed?.subject || ""),
+            text,
+            createdAt: row.created_at || "",
+        };
+    }));
+    return {
+        items,
+        latestId: items.at(-1)?.id || null,
         generatedAt: new Date().toISOString(),
     };
 };
