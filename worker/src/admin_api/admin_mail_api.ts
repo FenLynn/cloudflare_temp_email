@@ -212,6 +212,34 @@ export const getMailMessages = async (
     };
 };
 
+/** Read one bounded, parsed message for the dashboard detail drawer. Raw MIME,
+ * attachments and database metadata stay inside the mailbox service. */
+export const getMailMessage = async (
+    env: Pick<Bindings, "DB">,
+    requestedId: number,
+) => {
+    const id = Number.isSafeInteger(requestedId) && requestedId > 0 ? requestedId : 0;
+    if (!id) return null;
+    const row = await env.DB.prepare(
+        `SELECT id, source, address, raw, message_id, created_at
+         FROM raw_mails WHERE id = ? LIMIT 1`
+    ).bind(id).first<MailMessageRow>();
+    if (!row) return null;
+    const parsed = row.raw ? await commonParseMail({ rawEmail: row.raw }).catch(() => undefined) : undefined;
+    const text = String(parsed?.text || htmlToText(parsed?.html || ""));
+    return {
+        id: row.id,
+        messageId: row.message_id || null,
+        sender: normalizeSender(parsed?.sender || "", row.source || ""),
+        recipient: normalizeWhitespace(row.address || ""),
+        subject: normalizeWhitespace(parsed?.subject || ""),
+        text,
+        createdAt: row.created_at || "",
+        hasAttachments: Boolean(parsed?.attachments?.length),
+        attachmentCount: Array.isArray(parsed?.attachments) ? parsed.attachments.length : 0,
+    };
+};
+
 export default {
     getMails: async (c: Context<HonoCustomType>) => {
         const { address, limit, offset } = c.req.query();
